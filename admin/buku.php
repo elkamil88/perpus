@@ -1,339 +1,184 @@
 <?php
-include "../config/koneksi.php";
+include __DIR__."/../config/session.php";
+include __DIR__."/../config/koneksi.php";
 
-/* TAMBAH */
-if(isset($_POST['simpan']) && empty($_POST['id'])){
-    $judul = $_POST['judul'];
-    $penulis = $_POST['penulis'];
-    $stok = $_POST['stok'];
-
-    mysqli_query($koneksi,"
-        INSERT INTO buku (judul, penulis, stok)
-        VALUES ('$judul','$penulis','$stok')
-    ");
-
-    header("Location: buku.php");
-    exit;
-}
-
-/* EDIT / UPDATE */
-if(isset($_POST['simpan']) && !empty($_POST['id'])){
-    $id = $_POST['id'];
-    $judul = $_POST['judul'];
-    $penulis = $_POST['penulis'];
-    $stok = $_POST['stok'];
-
-    mysqli_query($koneksi,"
-        UPDATE buku 
-        SET judul='$judul', penulis='$penulis', stok='$stok'
-        WHERE id='$id'
-    ");
-
-    header("Location: buku.php");
-    exit;
-}
-
-$data = mysqli_query($koneksi,"SELECT * FROM buku");
-?>
-<?php
-include "../config/koneksi.php";
-
-if(isset($_POST['simpan'])){
-    $judul = $_POST['judul'];
-    $penulis = $_POST['penulis'];
-    $stok = $_POST['stok'];
-
-    if($judul != "" && $penulis != "" && $stok != ""){
-        mysqli_query($koneksi,"
-            INSERT INTO buku (judul, penulis, stok)
-            VALUES ('$judul','$penulis','$stok')
-        ");
-
-        header("Location: buku.php");
-        exit;
-    } else {
-        echo "<script>alert('Data tidak boleh kosong!');</script>";
-    }
-}
-?>
-<?php
-include "../config/koneksi.php";
-
-$data = mysqli_query($koneksi,"SELECT * FROM buku");
+$data = mysqli_query($conn,"SELECT * FROM buku");
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
-<title>CRUD Modern</title>
+<title>Kelola Buku</title>
 
 <style>
-*{
+body{
     margin:0;
-    padding:0;
-    font-family:Inter,Segoe UI;
-    box-sizing:border-box;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#0f172a,#1e293b);
+    color:white;
 }
 
-body{
-    background:#0f172a;
+/* TOPBAR */
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    padding:15px 20px;
+    background:#020617;
+}
+
+.menu a{
+    margin-right:15px;
+    text-decoration:none;
+    color:#94a3b8;
+}
+
+.menu a:hover{color:white;}
+
+.logout{
+    background:#ef4444;
+    padding:6px 12px;
+    border-radius:8px;
     color:white;
+    text-decoration:none;
 }
 
 /* HEADER */
 .header{
-    background:#1e293b;
     padding:20px;
-    border-bottom:1px solid #334155;
-}
-
-/* CONTAINER */
-.container{
-    padding:20px;
-}
-
-/* TOP BUTTON */
-.topbar{
     display:flex;
-    gap:10px;
-    margin-bottom:15px;
-}
-
-.btn{
-    padding:10px 15px;
-    border:none;
-    border-radius:12px;
-    cursor:pointer;
-    transition:0.3s;
+    justify-content:space-between;
+    align-items:center;
 }
 
 .btn-add{
-    background:#3b82f6;
+    background:linear-gradient(135deg,#22c55e,#4ade80);
+    padding:8px 14px;
+    border-radius:8px;
     color:white;
-}
-
-.btn-add:hover{
-    transform:translateY(-3px);
-    background:#2563eb;
-}
-
-.btn-back{
-    background:#64748b;
-    color:white;
-}
-
-.btn-back:hover{
-    transform:translateY(-3px);
-    background:#475569;
-}
-
-/* SEARCH */
-input{
-    width:100%;
-    padding:12px;
-    border-radius:12px;
-    border:1px solid #334155;
-    background:#1e293b;
-    color:white;
-    margin-bottom:15px;
-    transition:0.3s;
-}
-
-input:focus{
-    border-color:#3b82f6;
-    transform:scale(1.01);
+    text-decoration:none;
 }
 
 /* GRID */
 .grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-    gap:15px;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:20px;
+    padding:20px;
 }
 
 /* CARD */
 .card{
     background:#1e293b;
-    padding:15px;
     border-radius:15px;
-    border:1px solid #334155;
-    box-shadow:0 10px 20px rgba(0,0,0,0.3);
-    transition:0.4s;
-    opacity:0;
-    transform:translateY(15px);
-    animation:fadeIn 0.4s forwards;
+    overflow:hidden;
+    transition:0.3s;
+    position:relative;
 }
 
 .card:hover{
-    transform:translateY(-8px);
+    transform:translateY(-8px) scale(1.02);
 }
 
-/* ANIMATION */
-@keyframes fadeIn{
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
+/* IMAGE */
+.card img{
+    width:100%;
+    height:220px;
+    object-fit:cover;
 }
 
-/* ACTION BUTTON */
-.btn-edit{
-    background:#22c55e;
-    color:white;
-    margin-right:5px;
+/* BADGE */
+.badge{
+    position:absolute;
+    top:10px;
+    right:10px;
+    padding:5px 10px;
+    border-radius:10px;
+    font-size:12px;
 }
 
-.btn-edit:hover{
-    transform:scale(1.05);
+.stok-aman{background:#22c55e;}
+.stok-habis{background:#ef4444;}
+
+/* BODY */
+.card-body{
+    padding:12px;
 }
 
-.btn-del{
-    background:#ef4444;
-    color:white;
+.card-body h3{
+    margin:0;
+    font-size:16px;
 }
 
-.btn-del:hover{
-    transform:scale(1.05);
+.card-body p{
+    font-size:12px;
+    color:#94a3b8;
 }
 
-/* MODAL */
-.modal{
-    display:none;
-    position:fixed;
-    top:0;left:0;
-    width:100%;height:100%;
-    background:rgba(0,0,0,0.5);
-    backdrop-filter:blur(5px);
-    justify-content:center;
-    align-items:center;
+/* BUTTON */
+.actions{
+    margin-top:10px;
+    display:flex;
+    justify-content:space-between;
 }
 
-.modal-box{
-    background:#1e293b;
-    padding:20px;
-    border-radius:15px;
-    width:320px;
-    border:1px solid #334155;
-    transform:scale(0.8);
-    opacity:0;
-    animation:pop 0.3s forwards;
+.btn{
+    padding:5px 10px;
+    border-radius:6px;
+    font-size:12px;
+    text-decoration:none;
 }
 
-@keyframes pop{
-    to{
-        transform:scale(1);
-        opacity:1;
-    }
-}
-
-.modal-box input{
-    margin-bottom:10px;
-}
-
-.save{
-    background:#3b82f6;
-    color:white;
-}
-
-.save:hover{
-    transform:scale(1.05);
-}
+.edit{background:#3b82f6;color:white;}
+.hapus{background:#ef4444;color:white;}
 </style>
 
 </head>
 <body>
-    <img src="<?= $b['gambar']; ?>" width="60" style="border-radius:8px;">
 
-<div class="header">
-    <h2>📚 CRUD BUKU MODERN</h2>
-</div>
-
-<div class="container">
-
+<!-- TOPBAR -->
 <div class="topbar">
-
-<button class="btn btn-add" onclick="openModal()">+ Tambah Buku</button>
-
-<a href="dashboard.php">
-<button class="btn btn-back">⬅ Back</button>
-</a>
-
+    <div class="menu">
+        <a href="dashboard.php">Dashboard</a>
+        <a href="buku.php">Buku</a>
+        <a href="peminjaman.php">Peminjaman</a>
+    </div>
+    <a class="logout" href="../logout.php">Logout</a>
 </div>
 
-<input type="text" id="search" placeholder="🔍 Cari buku...">
+<!-- HEADER -->
+<div class="header">
+    <h2>📚 Kelola Buku</h2>
+    <a class="btn-add" href="tambah_buku.php">+ Tambah Buku</a>
+</div>
 
+<!-- GRID -->
 <div class="grid">
 
 <?php while($b=mysqli_fetch_assoc($data)){ ?>
 
 <div class="card">
-    <h3><?= $b['judul']; ?></h3>
-    <p>✍ <?= $b['penulis']; ?></p>
-    <p>📦 Stok: <?= $b['stok']; ?></p>
 
-    <button class="btn btn-edit" onclick="editData(<?= $b['id'] ?>,'<?= $b['judul'] ?>','<?= $b['penulis'] ?>',<?= $b['stok'] ?>)">Edit</button>
+    <img src="../assets/img/<?= $b['gambar'] ?: 'noimage.png'; ?>">
 
-    <a href="hapus.php?id=<?= $b['id'] ?>">
-        <button class="btn btn-del">Hapus</button>
-    </a>
+    <div class="badge <?= $b['stok'] > 0 ? 'stok-aman' : 'stok-habis'; ?>">
+        <?= $b['stok'] > 0 ? 'Stok: '.$b['stok'] : 'Habis'; ?>
+    </div>
+
+    <div class="card-body">
+        <h3><?= $b['judul']; ?></h3>
+        <p>✍ <?= $b['penulis']; ?></p>
+
+        <div class="actions">
+            <a class="btn edit" href="edit_buku.php?id=<?= $b['id']; ?>">Edit</a>
+            <a class="btn hapus" href="hapus_buku.php?id=<?= $b['id']; ?>" onclick="return confirm('Hapus buku ini?')">Hapus</a>
+        </div>
+    </div>
+
 </div>
 
 <?php } ?>
 
 </div>
-
-</div>
-
-<!-- MODAL -->
-<div class="modal" id="modal">
-<div class="modal-box">
-
-<h3 id="title">Tambah Buku</h3>
-
-<form method="POST">
-
-<input type="hidden" name="id" id="id">
-
-<input type="text" name="judul" id="judul" placeholder="Judul">
-<input type="text" name="penulis" id="penulis" placeholder="Penulis">
-<input type="number" name="stok" id="stok" placeholder="Stok">
-
-<button name="simpan" class="save">Simpan</button>
-<button type="button" onclick="closeModal()">Tutup</button>
-
-</form>
-
-</div>
-</div>
-
-<script>
-
-function openModal(){
-    document.getElementById('modal').style.display='flex';
-}
-
-function closeModal(){
-    document.getElementById('modal').style.display='none';
-}
-
-function editData(id,judul,penulis,stok){
-    openModal();
-    document.getElementById('id').value=id;
-    document.getElementById('judul').value=judul;
-    document.getElementById('penulis').value=penulis;
-    document.getElementById('stok').value=stok;
-}
-
-document.getElementById("search").addEventListener("input",function(){
-    let val=this.value.toLowerCase();
-    let cards=document.querySelectorAll(".card");
-
-    cards.forEach(c=>{
-        c.style.display=c.innerText.toLowerCase().includes(val)?"block":"none";
-    });
-});
-
-</script>
 
 </body>
 </html>

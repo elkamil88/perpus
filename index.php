@@ -1,34 +1,31 @@
 <?php
 session_start();
-include "config/koneksi.php";
-$error = "";
+include __DIR__ . "/config/koneksi.php";
 
 if(isset($_POST['login'])){
+    $username = mysqli_real_escape_string($conn,$_POST['username']);
+    $password = $_POST['password'];
 
-    $username = mysqli_real_escape_string($koneksi, $_POST['username']);
-    $password = mysqli_real_escape_string($koneksi, $_POST['password']);
+    $q = mysqli_query($conn,"SELECT * FROM user WHERE username='$username'");
 
-    $query = mysqli_query($koneksi,"
-        SELECT * FROM users 
-        WHERE (username='$username' OR email='$username') 
-        AND password='$password'
-    ");
+    if(mysqli_num_rows($q) > 0){
+        $d = mysqli_fetch_assoc($q);
 
-    $data = mysqli_fetch_assoc($query);
+        if($password == $d['password']){
+            $_SESSION['id'] = $d['id'];
+            $_SESSION['role'] = $d['role'];
 
-    if($data){
-        $_SESSION['id'] = $data['id'];
-        $_SESSION['username'] = $data['username'];
-        $_SESSION['role'] = $data['role'];
-
-        if($data['role']=='admin'){
-            header("Location: admin/dashboard.php");
+            if($d['role'] == 'admin'){
+                header("Location: admin/dashboard.php");
+            } else {
+                header("Location: user/dashboard.php");
+            }
+            exit;
         } else {
-            header("Location: user/dashboard.php");
+            $err = "Password salah!";
         }
-        exit;
     } else {
-        $error = "Username atau password salah!";
+        $err = "User tidak ditemukan!";
     }
 }
 ?>
@@ -36,119 +33,67 @@ if(isset($_POST['login'])){
 <!DOCTYPE html>
 <html>
 <head>
-<title>Login</title>
+<title>Login Perpustakaan</title>
 
 <style>
-*{
-    margin:0;
-    padding:0;
-    font-family:Inter,Segoe UI;
-    box-sizing:border-box;
-}
-
 body{
+    margin:0;
     height:100vh;
     display:flex;
     justify-content:center;
     align-items:center;
-    background: linear-gradient(135deg, #0f172a, #1e1b4b);
+    font-family:sans-serif;
+    background: linear-gradient(135deg,#0f172a,#1e293b);
 }
 
-/* LOGIN CARD (MATCH DASHBOARD STYLE) */
+/* CARD */
 .card{
-    width:380px;
-    padding:30px;
-    border-radius:18px;
-
+    width:320px;
+    padding:25px;
+    border-radius:15px;
     background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(12px);
-
-    border:1px solid rgba(255,255,255,0.1);
-    box-shadow:0 20px 40px rgba(0,0,0,0.5);
-
-    animation:fadeIn 0.8s ease;
-}
-
-@keyframes fadeIn{
-    from{opacity:0; transform:translateY(20px);}
-    to{opacity:1; transform:translateY(0);}
-}
-
-h2{
+    backdrop-filter: blur(10px);
     color:white;
-    margin-bottom:5px;
-}
-
-p{
-    color:#94a3b8;
-    font-size:13px;
-    margin-bottom:20px;
+    text-align:center;
 }
 
 /* INPUT */
 input{
     width:100%;
-    padding:12px;
-    margin-bottom:12px;
-
-    border-radius:10px;
-    border:1px solid rgba(255,255,255,0.1);
-
-    background: rgba(255,255,255,0.05);
+    padding:10px;
+    margin:10px 0;
+    border:none;
+    border-radius:8px;
+    background:#020617;
     color:white;
-
-    outline:none;
 }
 
-input:focus{
-    border-color:#6366f1;
-}
-
-/* BUTTON (MATCH DASHBOARD GRADIENT) */
+/* BUTTON */
 button{
     width:100%;
-    padding:12px;
+    padding:10px;
     border:none;
-    border-radius:12px;
-
-    background: linear-gradient(135deg, #6366f1, #22c55e);
+    border-radius:8px;
+    background:linear-gradient(135deg,#6366f1,#22c55e);
     color:white;
     font-weight:bold;
-
     cursor:pointer;
-    transition:0.3s;
-}
-
-button:hover{
-    transform:translateY(-3px);
-    box-shadow:0 10px 25px rgba(99,102,241,0.4);
 }
 
 /* ERROR */
 .error{
-    background: rgba(239,68,68,0.2);
-    color:#fca5a5;
-    padding:10px;
-    border-radius:10px;
+    background:#ef4444;
+    padding:8px;
+    border-radius:8px;
     margin-bottom:10px;
-    font-size:12px;
+    font-size:13px;
 }
 
 /* LINK */
 a{
-    color:#6366f1;
-    text-decoration:none;
-}
-
-a:hover{
-    text-decoration:underline;
-}
-
-.small{
-    margin-top:15px;
-    font-size:12px;
     color:#94a3b8;
-    text-align:center;
+    font-size:12px;
+    text-decoration:none;
 }
 </style>
 
@@ -157,26 +102,23 @@ a:hover{
 
 <div class="card">
 
-    <h2>📚 Library Login</h2>
-    <p>Masuk ke sistem perpustakaan</p>
+<h2>📚 Login</h2>
 
-    <?php if($error){ ?>
-        <div class="error"><?= $error; ?></div>
-    <?php } ?>
+<?php if(isset($err)){ ?>
+<div class="error"><?= $err; ?></div>
+<?php } ?>
 
-    <form method="POST">
+<form method="POST">
 
-        <input type="text" name="username" placeholder="Username / Email" required>
+<input name="username" placeholder="Username" required>
+<input type="password" name="password" placeholder="Password" required>
 
-        <input type="password" name="password" placeholder="Password" required>
+<button name="login">Masuk</button>
 
-        <button type="submit" name="login">LOGIN</button>
+</form>
 
-    </form>
-
-    <div class="small">
-        Belum punya akun? <a href="register.php">Daftar sekarang</a>
-    </div>
+<br>
+<a href="register.php">Belum punya akun? Daftar</a>
 
 </div>
 

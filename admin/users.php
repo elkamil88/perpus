@@ -2,153 +2,82 @@
 session_start();
 include "../config/koneksi.php";
 
-if(!isset($_SESSION['id']) || $_SESSION['role'] != 'admin'){
+if(!isset($_SESSION['id']) || $_SESSION['role']!='admin'){
     header("Location: ../index.php");
     exit;
 }
 
-/* HAPUS USER */
-if(isset($_GET['hapus'])){
-    $id = $_GET['hapus'];
-
-    mysqli_query($koneksi,"DELETE FROM users WHERE id='$id'");
-    header("Location: users.php");
-    exit;
-}
-
-/* DATA USER */
-$data = mysqli_query($koneksi,"
-SELECT * FROM users WHERE role='user'
-");
+$data = mysqli_query($koneksi,"SELECT * FROM users");
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
-<title>Data User</title>
+<title>Kelola User</title>
 
 <style>
-*{
-    margin:0;
-    padding:0;
-    font-family:Inter,Segoe UI;
-    box-sizing:border-box;
-}
-
 body{
-    background:#0f172a;
+    font-family:Inter;
+    background:linear-gradient(135deg,#0f172a,#1e1b4b);
     color:white;
-}
-
-/* HEADER */
-.header{
-    background:#1e293b;
-    padding:20px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border-bottom:1px solid #334155;
-}
-
-.btn-back{
-    padding:8px 12px;
-    background:#3b82f6;
-    color:white;
-    text-decoration:none;
-    border-radius:8px;
-}
-
-/* WRAPPER */
-.wrapper{
     padding:20px;
 }
 
-/* GRID USER CARD */
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-    gap:15px;
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
 }
 
-/* CARD USER */
-.card{
-    background:#1e293b;
-    padding:15px;
-    border-radius:15px;
-    border:1px solid #334155;
-    transition:0.3s;
+th,td{
+    padding:12px;
+    border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
-.card:hover{
-    transform:translateY(-6px);
-    box-shadow:0 10px 25px rgba(0,0,0,0.4);
-}
-
-/* BUTTON */
-.btn{
-    display:inline-block;
-    margin-top:10px;
-    padding:8px 12px;
+a{
+    padding:6px 10px;
     border-radius:8px;
-    background:#ef4444;
-    color:white;
     text-decoration:none;
-    transition:0.3s;
+    color:white;
 }
 
-.btn:hover{
-    background:#dc2626;
-}
-
-/* BADGE */
-.badge{
-    display:inline-block;
-    padding:4px 8px;
-    font-size:11px;
-    border-radius:6px;
-    background:#334155;
-    margin-top:5px;
-}
+.tambah{background:#22c55e;}
+.edit{background:#3b82f6;}
+.hapus{background:#ef4444;}
 </style>
-
 </head>
+
 <body>
 
-<!-- HEADER -->
-<div class="header">
-    <h2>👤 Data User</h2>
-    <a class="btn-back" href="dashboard.php">⬅ Kembali</a>
-</div>
+<h2>👤 Kelola User</h2>
 
-<div class="wrapper">
+<a class="tambah" href="tambah_user.php">+ Tambah User</a>
 
-<div class="grid">
+<table>
+<tr>
+    <th>No</th>
+    <th>Username</th>
+    <th>Email</th>
+    <th>Role</th>
+    <th>Aksi</th>
+</tr>
 
-<?php while($u=mysqli_fetch_assoc($data)){ ?>
+<?php $no=1; while($u=mysqli_fetch_assoc($data)){ ?>
 
-<div class="card">
-
-    <h3>👤 <?= $u['username']; ?></h3>
-
-    <p class="badge">Email: <?= $u['email']; ?></p>
-
-    <p class="badge">Role: <?= $u['role']; ?></p>
-
-    <br>
-
-    <a href="?hapus=<?= $u['id']; ?>" 
-       class="btn"
-       onclick="return confirm('Yakin mau hapus user ini?')">
-       🗑 Hapus User
-    </a>
-
-</div>
+<tr>
+<td><?= $no++; ?></td>
+<td><?= $u['username']; ?></td>
+<td><?= $u['email']; ?></td>
+<td><?= $u['role']; ?></td>
+<td>
+    <a class="edit" href="edit_user.php?id=<?= $u['id']; ?>">Edit</a>
+    <a class="hapus" href="hapus_user.php?id=<?= $u['id']; ?>" onclick="return confirm('Hapus user?')">Hapus</a>
+</td>
+</tr>
 
 <?php } ?>
 
-</div>
-
-</div>
+</table>
 
 </body>
 </html>

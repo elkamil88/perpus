@@ -1,33 +1,45 @@
 <?php
-include "../config/koneksi.php";
 session_start();
+include __DIR__."/../config/koneksi.php";
 
-$data = mysqli_query($koneksi,"SELECT * FROM buku");
-?>
+if(!isset($_SESSION['id'])){
+    header("Location: ../index.php");
+    exit;
+}
 
-<h2>📚 DAFTAR BUKU</h2>
+$user_id = $_SESSION['id'];
+$buku_id = intval($_GET['id']);
 
-<table border="1" cellpadding="10">
-<tr>
-<th>Judul</th>
-<th>Penulis</th>
-<th>Stok</th>
-<th>Aksi</th>
-</tr>
+/* CEK BUKU */
+$buku = mysqli_fetch_assoc(mysqli_query($conn,"SELECT * FROM buku WHERE id='$buku_id'"));
 
-<?php while($b=mysqli_fetch_assoc($data)){ ?>
-<tr>
-<td><?= $b['judul'] ?></td>
-<td><?= $b['penulis'] ?></td>
-<td><?= $b['stok'] ?></td>
-<td>
+if(!$buku){
+    die("Buku tidak ditemukan!");
+}
 
-<a href="pinjam.php?id=<?= $b['id'] ?>">
-    📥 Pinjam
-</a>
+/* VALIDASI STOK */
+if($buku['stok'] <= 0){
+    echo "<script>alert('Stok habis!');location='dashboard.php';</script>";
+    exit;
+}
 
-</td>
-</tr>
-<?php } ?>
+/* CEK DUPLIKAT */
+$cek = mysqli_query($conn,"
+SELECT * FROM peminjaman 
+WHERE user_id='$user_id' 
+AND buku_id='$buku_id' 
+AND status IN ('menunggu','dipinjam')
+");
 
-</table>
+if(mysqli_num_rows($cek) > 0){
+    echo "<script>alert('Sudah request / dipinjam!');location='dashboard.php';</script>";
+    exit;
+}
+
+/* INSERT */
+mysqli_query($conn,"
+INSERT INTO peminjaman(user_id,buku_id,status)
+VALUES('$user_id','$buku_id','menunggu')
+");
+
+echo "<script>alert('Menunggu ACC admin!');location='dashboard.php';</script>";

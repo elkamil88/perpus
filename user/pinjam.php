@@ -1,51 +1,58 @@
 <?php
 session_start();
-include "../config/koneksi.php";
+include __DIR__."/../config/koneksi.php";
 
+/* CEK LOGIN */
 if(!isset($_SESSION['id'])){
     header("Location: ../index.php");
     exit;
 }
 
 $user_id = $_SESSION['id'];
-$buku_id = $_GET['id'];
 
-/* 🔥 CEK ULANG STOK REAL-TIME */
-$cek = mysqli_query($koneksi,"
-    SELECT * FROM buku WHERE id='$buku_id' FOR UPDATE
-");
+/* VALIDASI ID */
+if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
+    die("ID buku tidak valid!");
+}
 
-$buku = mysqli_fetch_assoc($cek);
+$buku_id = intval($_GET['id']);
+
+/* CEK DATA BUKU */
+$q_buku = mysqli_query($conn,"SELECT * FROM buku WHERE id='$buku_id'");
+$buku   = mysqli_fetch_assoc($q_buku);
 
 if(!$buku){
-    echo "<script>alert('Buku tidak ditemukan');window.location='dashboard.php';</script>";
-    exit;
+    die("Buku tidak ditemukan!");
 }
 
-/* ❌ VALIDASI STOK */
+/* VALIDASI STOK */
 if($buku['stok'] <= 0){
-    echo "<script>alert('Stok habis! Tidak bisa dipinjam');window.location='dashboard.php';</script>";
+    echo "<script>alert('Stok buku habis!');location='dashboard.php';</script>";
     exit;
 }
 
-/* 🔥 CEK USER SUDAH PINJAM YANG SAMA */
-$cekPinjam = mysqli_query($koneksi,"
-    SELECT * FROM peminjaman 
-    WHERE user_id='$user_id' 
-    AND buku_id='$buku_id' 
-    AND status='dipinjam'
+/* VALIDASI DUPLIKAT */
+$cek = mysqli_query($conn,"
+SELECT * FROM peminjaman 
+WHERE user_id='$user_id' 
+AND buku_id='$buku_id' 
+AND status IN ('menunggu','dipinjam')
 ");
 
-if(mysqli_num_rows($cekPinjam) > 0){
-    echo "<script>alert('Kamu sudah meminjam buku ini');window.location='dashboard.php';</script>";
+if(mysqli_num_rows($cek) > 0){
+    echo "<script>alert('Kamu sudah meminjam / menunggu buku ini!');location='dashboard.php';</script>";
     exit;
 }
 
-/* 🔥 INSERT PEMINJAMAN (STATUS MENUNGGU / DIPINJAM) */
-mysqli_query($koneksi,"
-    INSERT INTO peminjaman (user_id,buku_id,status)
-    VALUES ('$user_id','$buku_id','menunggu')
+/* SIMPAN DATA (MENUNGGU ACC) */
+$simpan = mysqli_query($conn,"
+INSERT INTO peminjaman(user_id,buku_id,status)
+VALUES('$user_id','$buku_id','menunggu')
 ");
 
-echo "<script>alert('Permintaan pinjam dikirim ke admin');window.location='dashboard.php';</script>";
-?>
+/* CEK INSERT */
+if(!$simpan){
+    die("Gagal menyimpan: " . mysqli_error($conn));
+}
+
+echo "<script>alert('Permintaan berhasil! Menunggu ACC admin');location='dashboard.php';</script>";

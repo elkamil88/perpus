@@ -1,68 +1,11 @@
 <?php
-session_start();
-include "../config/koneksi.php";
+include __DIR__ . "/../config/koneksi.php";
 
-/* CEK LOGIN ADMIN */
-if(!isset($_SESSION['id']) || $_SESSION['role'] != 'admin'){
-    header("Location: ../index.php");
-    exit;
-}
-
-/* =====================
-   APPROVE PEMINJAMAN
-===================== */
-if(isset($_GET['approve'])){
-    $id = $_GET['approve'];
-
-    $cek = mysqli_query($koneksi,"
-        SELECT * FROM peminjaman WHERE id='$id'
-    ");
-    $data = mysqli_fetch_assoc($cek);
-
-    if($data && $data['status']=='menunggu'){
-
-        // ubah status jadi dipinjam
-        mysqli_query($koneksi,"
-            UPDATE peminjaman 
-            SET status='dipinjam'
-            WHERE id='$id'
-        ");
-
-        // kurangi stok buku
-        mysqli_query($koneksi,"
-            UPDATE buku 
-            SET stok = stok - 1 
-            WHERE id='{$data['buku_id']}'
-        ");
-    }
-
-    header("Location: peminjaman.php");
-    exit;
-}
-
-/* =====================
-   TOLAK PEMINJAMAN
-===================== */
-if(isset($_GET['tolak'])){
-    $id = $_GET['tolak'];
-
-    mysqli_query($koneksi,"
-        UPDATE peminjaman 
-        SET status='ditolak'
-        WHERE id='$id'
-    ");
-
-    header("Location: peminjaman.php");
-    exit;
-}
-
-/* =====================
-   AMBIL DATA PEMINJAMAN
-===================== */
-$data = mysqli_query($koneksi,"
-SELECT peminjaman.*, users.username, buku.judul
+/* QUERY */
+$data = mysqli_query($conn,"
+SELECT peminjaman.*, user.username, buku.judul 
 FROM peminjaman
-JOIN users ON users.id = peminjaman.user_id
+JOIN user ON user.id = peminjaman.user_id
 JOIN buku ON buku.id = peminjaman.buku_id
 ORDER BY peminjaman.id DESC
 ");
@@ -75,96 +18,159 @@ ORDER BY peminjaman.id DESC
 
 <style>
 body{
-    font-family:Arial;
-    background:#0f172a;
+    margin:0;
+    font-family:sans-serif;
+    background: linear-gradient(135deg,#0f172a,#1e293b);
     color:white;
 }
 
-.container{
-    padding:20px;
+/* TOPBAR */
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    padding:15px 20px;
+    background:#020617;
 }
 
+.menu a{
+    margin-right:15px;
+    color:#94a3b8;
+    text-decoration:none;
+}
+
+.menu a:hover{color:white;}
+
+.logout{
+    background:#ef4444;
+    padding:6px 12px;
+    border-radius:8px;
+    color:white;
+    text-decoration:none;
+}
+
+/* CONTAINER */
+.container{
+    width:90%;
+    margin:auto;
+    margin-top:20px;
+}
+
+/* HEADER */
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+/* BACK BUTTON */
+.back{
+    background:#6366f1;
+    padding:8px 12px;
+    border-radius:8px;
+    text-decoration:none;
+    color:white;
+}
+
+/* TABLE */
 table{
     width:100%;
+    margin-top:20px;
     border-collapse:collapse;
     background:#1e293b;
+    border-radius:12px;
+    overflow:hidden;
 }
 
 th,td{
     padding:12px;
-    border:1px solid #334155;
-    text-align:left;
+    text-align:center;
 }
 
 th{
+    background:#020617;
+    color:#94a3b8;
+}
+
+tr:hover{
     background:#334155;
 }
 
-a{
-    text-decoration:none;
-    padding:6px 10px;
-    border-radius:6px;
-    margin-right:5px;
-}
-
-.approve{
-    background:#22c55e;
-    color:white;
-}
-
-.tolak{
-    background:#ef4444;
-    color:white;
-}
-
+/* BADGE */
 .badge{
-    padding:4px 8px;
-    border-radius:6px;
-    background:#334155;
+    padding:5px 10px;
+    border-radius:8px;
+    font-size:12px;
 }
+
+.menunggu{background:#facc15;color:black;}
+.dipinjam{background:#22c55e;}
+.kembali{background:#64748b;}
+.ditolak{background:#ef4444;}
+
+/* BUTTON */
+.btn{
+    padding:5px 10px;
+    border-radius:6px;
+    text-decoration:none;
+    color:white;
+    font-size:12px;
+}
+
+.acc{background:#22c55e;}
+.tolak{background:#ef4444;}
 </style>
 
 </head>
 <body>
 
+<!-- NAVBAR -->
+<div class="topbar">
+    <div class="menu">
+        <a href="dashboard.php">Dashboard</a>
+        <a href="buku.php">Buku</a>
+        <a href="peminjaman.php">Peminjaman</a>
+    </div>
+    <a class="logout" href="../logout.php">Logout</a>
+</div>
+
 <div class="container">
 
-<h2>📥 Data Peminjaman Buku</h2>
+<div class="header">
+    <h2>📦 Data Peminjaman</h2>
+    <a href="dashboard.php" class="back">← Kembali</a>
+</div>
 
 <table>
 <tr>
-<th>User</th>
-<th>Buku</th>
-<th>Status</th>
-<th>Aksi</th>
+    <th>No</th>
+    <th>User</th>
+    <th>Buku</th>
+    <th>Status</th>
+    <th>Aksi</th>
 </tr>
 
-<?php while($p=mysqli_fetch_assoc($data)){ ?>
-
+<?php $no=1; while($d=mysqli_fetch_assoc($data)){ ?>
 <tr>
-<td><?= $p['username']; ?></td>
-<td><?= $p['judul']; ?></td>
-<td><span class="badge"><?= $p['status']; ?></span></td>
-<td>
+    <td><?= $no++; ?></td>
+    <td><?= htmlspecialchars($d['username']); ?></td>
+    <td><?= htmlspecialchars($d['judul']); ?></td>
 
-<?php if($p['status']=='menunggu'){ ?>
+    <td>
+        <span class="badge <?= $d['status']; ?>">
+            <?= $d['status']; ?>
+        </span>
+    </td>
 
-    <a class="approve" href="?approve=<?= $p['id']; ?>">✔ Approve</a>
-    <a class="tolak" href="?tolak=<?= $p['id']; ?>">❌ Tolak</a>
+    <td>
+    <?php if($d['status']=='menunggu'){ ?>
+        <a href="acc.php?id=<?= $d['id']; ?>" class="btn acc">ACC</a>
+        <a href="tolak.php?id=<?= $d['id']; ?>" class="btn tolak">Tolak</a>
+    <?php } else { ?>
+        -
+    <?php } ?>
+    </td>
 
-<?php } elseif($p['status']=='dipinjam'){ ?>
-
-    <span class="badge">Sedang Dipinjam</span>
-
-<?php } else { ?>
-
-    <span class="badge">Selesai</span>
-
-<?php } ?>
-
-</td>
 </tr>
-
 <?php } ?>
 
 </table>

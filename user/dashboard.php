@@ -1,28 +1,58 @@
 <?php
-session_start();
-include "../config/koneksi.php";
+include __DIR__."/../config/session.php";
+include __DIR__."/../config/koneksi.php";
 
-if(!isset($_SESSION['id'])){
-    header("Location: ../index.php");
-    exit;
+$user = $_SESSION['id'];
+
+/* VALIDASI */
+$search = '';
+$filter = '';
+$error  = '';
+
+if(isset($_GET['search'])){
+    $search = trim($_GET['search']);
+
+    if(strlen($search) > 50){
+        $error = "Pencarian terlalu panjang!";
+        $search = '';
+    }
+
+    if(!preg_match("/^[a-zA-Z0-9\s]*$/",$search)){
+        $error = "Hanya huruf & angka!";
+        $search = '';
+    }
+
+    $search = mysqli_real_escape_string($conn,$search);
 }
 
-$user_id = $_SESSION['id'];
+if(isset($_GET['filter'])){
+    $allowed = ['','tersedia','habis'];
 
-/* SEARCH */
-$search = isset($_GET['search']) ? $_GET['search'] : '';
+    if(in_array($_GET['filter'],$allowed)){
+        $filter = $_GET['filter'];
+    }
+}
 
-$buku = mysqli_query($koneksi,"
-    SELECT * FROM buku 
-    WHERE judul LIKE '%$search%'
-");
+/* QUERY */
+$where = "WHERE 1=1";
 
-$pinjam = mysqli_query($koneksi,"
+if($search){
+    $where .= " AND judul LIKE '%$search%'";
+}
+
+if($filter == "tersedia"){
+    $where .= " AND stok > 0";
+} elseif($filter == "habis"){
+    $where .= " AND stok = 0";
+}
+
+$buku = mysqli_query($conn,"SELECT * FROM buku $where");
+
+$pinjam = mysqli_query($conn,"
 SELECT peminjaman.*, buku.judul 
 FROM peminjaman 
 JOIN buku ON buku.id=peminjaman.buku_id
-WHERE peminjaman.user_id='$user_id'
-AND peminjaman.status='dipinjam'
+WHERE user_id='$user' AND status='dipinjam'
 ");
 ?>
 
@@ -32,128 +62,108 @@ AND peminjaman.status='dipinjam'
 <title>User Dashboard</title>
 
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Inter;
-}
-
 body{
-    background: linear-gradient(135deg,#0f172a,#1e1b4b);
+    margin:0;
+    font-family:sans-serif;
+    background: linear-gradient(135deg,#0f172a,#1e293b);
     color:white;
 }
 
-/* TOPBAR */
 .topbar{
-    padding:15px 20px;
     display:flex;
     justify-content:space-between;
-    align-items:center;
-
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
-    border-bottom:1px solid rgba(255,255,255,0.1);
+    padding:15px 20px;
+    background:#020617;
 }
 
 .logout{
     background:#ef4444;
-    padding:8px 12px;
-    border-radius:10px;
+    padding:6px 12px;
+    border-radius:8px;
     color:white;
     text-decoration:none;
 }
 
-/* HERO */
-.hero{
-    padding:25px;
-    text-align:center;
-}
+.hero{padding:20px;}
 
-.hero h1{
-    font-size:22px;
-}
-
-.hero p{
-    font-size:13px;
-    color:#94a3b8;
-    margin-top:5px;
-}
-
-/* SEARCH */
 .search-box{
-    display:flex;
-    justify-content:center;
-    margin-top:15px;
+    padding:0 20px;
+    margin-bottom:10px;
 }
 
-.search-box input{
-    width:300px;
+.search-box form{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.search-box input,
+.search-box select{
     padding:10px;
-    border-radius:10px;
+    border-radius:8px;
     border:none;
-    outline:none;
-    background:#1e293b;
+    background:#020617;
     color:white;
+}
+
+.search-box input{flex:1;}
+
+.btn{
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    background:linear-gradient(135deg,#6366f1,#22c55e);
+    color:white;
+    cursor:pointer;
+}
+
+.error{
+    margin:0 20px 10px;
+    padding:10px;
+    background:#ef4444;
+    border-radius:8px;
 }
 
 /* GRID */
 .grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
     gap:15px;
     padding:20px;
 }
 
-/* CARD */
 .card{
-    position:relative;
-    border-radius:15px;
-    overflow:hidden;
-    height:260px;
-
     background:#1e293b;
-    transition:0.3s;
-    border:1px solid rgba(255,255,255,0.1);
-}
-
-.card:hover{
-    transform:translateY(-8px);
+    border-radius:12px;
+    overflow:hidden;
+    position:relative;
 }
 
 .card img{
     width:100%;
-    height:100%;
+    height:200px;
     object-fit:cover;
-    filter:brightness(0.8);
 }
 
-.overlay{
-    position:absolute;
-    bottom:0;
-    width:100%;
-    padding:10px;
-
-    background:linear-gradient(to top,rgba(0,0,0,0.9),transparent);
-}
-
-/* BADGE */
 .badge{
     position:absolute;
     top:10px;
     right:10px;
-    background:#22c55e;
-    padding:5px 8px;
+    padding:5px 10px;
     border-radius:8px;
-    font-size:11px;
+    font-size:12px;
 }
 
-/* BUTTON */
-.btn{
+.ada{background:#22c55e;}
+.habis{background:#ef4444;}
+
+.card-body{padding:10px;}
+
+.pinjam{
     display:inline-block;
     margin-top:5px;
     padding:6px 10px;
-    border-radius:8px;
+    border-radius:6px;
     background:linear-gradient(135deg,#6366f1,#22c55e);
     color:white;
     text-decoration:none;
@@ -164,78 +174,81 @@ body{
 </head>
 <body>
 
-<!-- TOP -->
 <div class="topbar">
-    <h3>📚 Library User</h3>
+    <h3>📚 User Dashboard</h3>
     <a class="logout" href="../logout.php">Logout</a>
+    <a href="riwayat.php">Riwayat</a>
 </div>
 
-<!-- HERO -->
 <div class="hero">
-    <h1>Selamat Datang 👋</h1>
-    <p>Temukan dan pinjam buku favoritmu</p>
-
-    <form class="search-box" method="GET">
-        <input type="text" name="search" placeholder="Cari buku..." value="<?= $search; ?>">
-    </form>
+    <h2>Selamat Datang 👋</h2>
+    <p>Cari dan pinjam buku favoritmu</p>
 </div>
 
-<!-- BUKU -->
+<?php if($error){ ?>
+<div class="error"><?= $error; ?></div>
+<?php } ?>
+
+<div class="search-box">
+<form method="GET">
+
+<input type="text" name="search" placeholder="Cari buku..."
+value="<?= htmlspecialchars($search); ?>">
+
+<select name="filter">
+    <option value="">Semua</option>
+    <option value="tersedia" <?= $filter=='tersedia'?'selected':''; ?>>Tersedia</option>
+    <option value="habis" <?= $filter=='habis'?'selected':''; ?>>Habis</option>
+</select>
+
+<button class="btn">Cari</button>
+
+</form>
+</div>
+
+<h3 style="padding-left:20px;">📖 Daftar Buku</h3>
+
 <div class="grid">
 
 <?php while($b=mysqli_fetch_assoc($buku)){ ?>
-
 <div class="card">
 
-    <img src="<?= $b['gambar']; ?>">
+<img src="../assets/img/<?= $b['gambar'] ?: 'noimage.png'; ?>">
 
-    <div class="badge">
-        Stok: <?= $b['stok']; ?>
-    </div>
-
-    <div class="overlay">
-        <h3><?= $b['judul']; ?></h3>
-        <p style="font-size:12px; color:#cbd5e1;">
-            ✍ <?= $b['penulis']; ?>
-        </p>
-
-        <?php if($b['stok'] > 0){ ?>
-            <a class="btn" href="pinjam.php?id=<?= $b['id']; ?>">
-                📥 Pinjam
-            </a>
-        <?php } else { ?>
-            <span style="font-size:11px;color:#f87171;">Habis</span>
-        <?php } ?>
-
-    </div>
-
+<div class="badge <?= $b['stok']>0?'ada':'habis'; ?>">
+<?= $b['stok']>0 ? 'Stok: '.$b['stok'] : 'Habis'; ?>
 </div>
 
+<div class="card-body">
+<h3><?= htmlspecialchars($b['judul']); ?></h3>
+<p>✍ <?= htmlspecialchars($b['penulis']); ?></p>
+
+<?php if($b['stok']>0){ ?>
+<a class="pinjam" href="pinjam.php?id=<?= $b['id']; ?>">📥 Pinjam</a>
+<?php } else { ?>
+<p style="color:#ef4444;font-size:12px;">Tidak tersedia</p>
+<?php } ?>
+
+</div>
+</div>
 <?php } ?>
 
 </div>
 
-<!-- PINJAMAN -->
-<div style="padding:20px;">
-<h3>📦 Buku Dipinjam</h3>
-</div>
+<h3 style="padding-left:20px;">📦 Buku Dipinjam</h3>
 
 <div class="grid">
 
 <?php while($p=mysqli_fetch_assoc($pinjam)){ ?>
-
 <div class="card">
+<div class="card-body">
+<h3><?= htmlspecialchars($p['judul']); ?></h3>
 
-    <div class="overlay">
-        <h3><?= $p['judul']; ?></h3>
-
-        <a class="btn" href="kembali.php?id=<?= $p['id']; ?>">
-            🔄 Kembalikan
-        </a>
-    </div>
-
+<a class="pinjam" href="kembali.php?id=<?= $p['id']; ?>">
+🔄 Kembalikan
+</a>
 </div>
-
+</div>
 <?php } ?>
 
 </div>
